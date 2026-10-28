@@ -1,5 +1,7 @@
 # ResetHook
 
+![ResetHook](docs/banner-en.png)
+
 Wakes your Grok Bot when a global Codex reset is announced, so it uses up the remaining quota before the reset.
 
 [Website](https://resethook.rakel.top/?lang=en) · [中文](README.md) · MIT · Cloudflare Workers

@@ -4,7 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark light">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f5c518' d='M4 0h3v1H6v2h2v2H5v1h2v2H5v1H4v1H3v1H2v-2h1V8h1V7H2V5h1V3h1z'/%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#1d1a2e">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ResetHook">
+<meta property="og:title" content="{{TITLE_FULL}}">
+<meta property="og:description" content="{{DESC}}">
+<meta property="og:url" content="{{BASE}}/{{LANGQ}}">
+<meta property="og:image" content="{{BASE}}/og-{{LANGKEY}}.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{TITLE_FULL}}">
+<meta name="twitter:description" content="{{DESC}}">
+<meta name="twitter:image" content="{{BASE}}/og-{{LANGKEY}}.png">
 <title>{{TITLE}}</title>
 <meta name="description" content="{{DESC}}">
 <style>
@@ -45,7 +60,7 @@ a { color: inherit; }
 
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; font: 700 15px/1 var(--mono); letter-spacing: .02em; text-decoration: none; }
-.brand svg { width: 22px; height: 22px; color: var(--spark); }
+.brand img { width: 22px; height: 22px; image-rendering: pixelated; }
 nav { display: flex; gap: 18px; font: 14px var(--mono); color: var(--mut); }
 nav a { text-decoration: none; padding: 6px 0; }
 nav a:hover { color: var(--ink); }
@@ -193,7 +208,7 @@ footer { margin-top: 28px; font: 12px/1.7 var(--mono); color: var(--mut); displa
 
 <main>
   <header>
-    <a class="brand" href="/"><svg><use href="#hook"/></svg>ResetHook</a>
+    <a class="brand" href="/{{LANGQ}}"><img src="/favicon.svg" width="22" height="22" alt="">ResetHook</a>
     <nav><a href="#api" data-t="api" onclick="document.getElementById('api').open=true"></a><a href="/feed.xml">Atom</a><a id="langlink" href="#"></a></nav>
   </header>
 

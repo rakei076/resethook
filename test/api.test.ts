@@ -408,6 +408,9 @@ describe("public pages", () => {
     expect(zh).toContain('<html lang="zh-CN">');
     expect(zh).toContain('const LANG = "zh"');
     expect(zh).toContain("/skill/install.sh | sh");
+    expect(zh).toContain('<meta property="og:image" content="https://resethook.example.com/og-zh.png">');
+    expect(zh).toContain('<meta name="twitter:card" content="summary_large_image">');
+    expect(page).toContain("/og-en.png");
 
     // the skill is served from the site: an installer that fetches every bundled file, and the files themselves
     const install = await (await get("/skill/install.sh")).text();

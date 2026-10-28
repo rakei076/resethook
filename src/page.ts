@@ -55,6 +55,8 @@ export function renderPage(opts: { lang: Lang; status: Status; latest: EventRow 
     LANG: opts.lang === "zh" ? "zh-CN" : "en",
     LANGKEY: opts.lang,
     TITLE: "ResetHook",
+    TITLE_FULL: esc(`ResetHook · ${t.h1}`),
+    LANGQ: opts.lang === "en" ? "?lang=en" : "",
     DESC: esc(t.desc),
     H1: esc(t.h1),
     SUB: esc(t.sub),

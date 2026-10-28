@@ -1,5 +1,7 @@
 # ResetHook
 
+![ResetHook](docs/banner.png)
+
 Codex 预告整体重置时叫醒你的 Grok Bot，在重置前用完剩余额度。
 
 [网站](https://resethook.rakel.top) · [English](README.en.md) · MIT · Cloudflare Workers

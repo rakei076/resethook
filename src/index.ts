@@ -67,7 +67,7 @@ app.get("/feed.xml", async (c) => {
 });
 
 app.get("/privacy", (c) =>
-  c.html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ResetHook privacy</title>
+  c.html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ResetHook privacy</title><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <body style="font:16px/1.6 system-ui;max-width:640px;margin:2em auto;padding:0 16px"><h1>Privacy</h1>
 <p>ResetHook stores the webhook URL you submit (for a Grok Bot, its webhook key too, encrypted), the event patterns you chose, a secret for signing, a hash of the manage token, and a salted hash of your IP address (only to rate-limit sign-ups). Delivery logs (HTTP status, time) are kept for 7 days.</p>
 <p>Delete your subscription at any time with <code>DELETE /api/v1/subscriptions/:id</code> using your manage token (or the manage link). The secret, token, key and delivery logs are removed at once; the URL and IP hash stay for up to 2 hours so sign-up limits still apply, then they are removed too. There are no cookies. Cloudflare Turnstile loads only when you start typing in the sign-up form; X scripts load only when you click "Load interactive post".</p>
@@ -118,7 +118,7 @@ app.get("/manage", (c) => {
   const T = zh
     ? { title: "管理 ResetHook", loading: "读取中…", bad: "链接不完整或已失效。", st: { active: "运行中", disabled: "已停用（连续发送失败）", pending: "等待验证", rejected: "没接通" }, test: "发一条测试", del: "停用并删除", sure: "确定删除？删除后不会再收到提醒。", sent: "测试已发出。", fail: "没发出去：", gone: "已删除。", grok: "Grok Bot", hook: "Webhook", back: "回首页" }
     : { title: "Manage ResetHook", loading: "Loading…", bad: "This link is incomplete or no longer valid.", st: { active: "Running", disabled: "Off (too many failed deliveries)", pending: "Waiting for verification", rejected: "Not connected" }, test: "Send a test", del: "Turn off and delete", sure: "Delete it? You will stop getting alerts.", sent: "Test sent.", fail: "Not delivered: ", gone: "Deleted.", grok: "Grok Bot", hook: "Webhook", back: "Home" };
-  return c.html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${T.title}</title>
+  return c.html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>${T.title}</title>
 <body style="font:16px/1.6 system-ui;max-width:560px;margin:2em auto;padding:0 16px;color-scheme:light dark"><h1 style="font-size:22px">${T.title}</h1>
 <p id="info">${T.loading}</p><p id="msg"></p>
 <p><button id="test" hidden>${T.test}</button> <button id="del" hidden>${T.del}</button></p><p><a href="/">${T.back}</a></p>
