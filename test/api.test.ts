@@ -273,12 +273,12 @@ describe("grok bot delivery", () => {
 
   it("connects with the routine's url and key: a test message proves the key, the key is stored encrypted", async () => {
     const g = grokServer();
-    const res = await signUp(g.f, { url: GROK, grok_key: "Bearer gk_live_123", lang: "zh" });
+    const res = await signUp(g.f, { url: GROK, grok_key: "Authorization: Bearer gk_live_123", lang: "zh" });
     expect(res.status).toBe(201);
     const sub = (await res.json()) as any;
     expect(sub.secret).toBeUndefined();
     expect(sub.manage_url).toContain(`/manage#${sub.id}.`);
-    expect(sub.events).toEqual(["codex.reset.announced", "codex.reset.retracted"]);
+    expect(sub.events).toEqual(["codex.reset.announced", "codex.reset.landed", "codex.reset.retracted"]);
     expect(g.calls[0].headers.get("authorization")).toBe("Bearer gk_live_123");
     expect(g.calls[0].body.message).toContain("ResetHook 测试");
     const row = await e.DB.prepare("SELECT kind, bearer_enc, lang FROM subscriptions WHERE id = ?").bind(sub.id).first<any>();
@@ -287,10 +287,25 @@ describe("grok bot delivery", () => {
     expect(row.bearer_enc).not.toContain("gk_live_123");
   });
 
+  it("replays the latest real reset post as a marked test", async () => {
+    const g = grokServer();
+    const sub = (await (await signUp(g.f, { url: GROK, grok_key: "gk_2", lang: "zh" })).json()) as any;
+    await e.DB.prepare("INSERT INTO events (id, product, stage, reset_id, post_id, post_url, author, posted_at, text, eta, confidence, confirmations, created_at) VALUES ('evt_codex_6_landed', 'codex', 'landed', 'r', '6', 'u', 'thsottiaux', '2026-10-28T06:35:00Z', 'Lands by midnight PST.', NULL, 'confirmed', '[]', '2026-10-28T06:36:00Z')").run();
+    const res = await subsApp(g.f).fetch(jsonReq(`/api/v1/subscriptions/${sub.id}/test?sample=latest`, "POST", undefined, { authorization: `Bearer ${sub.manage_token}` }), e);
+    expect(await res.json()).toMatchObject({ delivered: true });
+    const message = g.calls.at(-1)!.body.message as string;
+    expect(message).toMatch(/^【测试/);
+    expect(message).toContain("Lands by midnight PST.");
+  });
+
   it("refuses other hosts and keys Grok does not accept", async () => {
     const g = grokServer();
     expect((await signUp(g.f, { url: "https://hooks.example.com/x", grok_key: "k" })).status).toBe(400);
     expect((await signUp(g.f, { url: GROK, grok_key: "k\r\nX-Evil: 1" })).status).toBe(400);
+    const pastedUrl = await signUp(g.f, { url: GROK, grok_key: GROK });
+    expect(pastedUrl.status).toBe(400);
+    expect(((await pastedUrl.json()) as any).error).toContain("holds a url");
+    expect(g.calls.length).toBe(0);
     expect(g.calls.length).toBe(0);
     const bad = grokServer(401);
     const res = await signUp(bad.f, { url: GROK, grok_key: "wrong" });
@@ -298,7 +313,7 @@ describe("grok bot delivery", () => {
     expect(await e.DB.prepare("SELECT status FROM subscriptions WHERE kind = 'grok'").first("status")).toBe("rejected");
   });
 
-  it("delivers an announcement as a plain message with the bearer key, and stays quiet on a landed reset", async () => {
+  it("delivers reset posts as plain messages with the bearer key, landed ones too, and skips reset cards", async () => {
     const sub = (await (await signUp(grokServer().f, { url: GROK, grok_key: "gk_1", lang: "zh" })).json()) as any;
     await e.DB.prepare("INSERT INTO events (id, product, stage, reset_id, post_id, post_url, author, posted_at, text, eta, confidence, confirmations, created_at) VALUES ('evt_codex_9_announced', 'codex', 'announced', 'r', '9', 'https://x.com/thsottiaux/status/9', 'thsottiaux', '2026-10-28T06:00:00Z', 'Reset tonight', '2026-10-29T07:59:00Z', 'confirmed', '[]', '2026-10-28T06:01:00Z')").run();
     const g = grokServer();
@@ -314,11 +329,17 @@ describe("grok bot delivery", () => {
     expect(g.calls[0].body.message).toContain("「Reset tonight」");
     expect(g.calls[0].body.message).toContain("eta=2026-10-29T07:59:00Z");
 
-    await e.DB.prepare("INSERT INTO events (id, product, stage, reset_id, post_id, post_url, author, posted_at, text, eta, confidence, confirmations, created_at) VALUES ('evt_codex_9_landed', 'codex', 'landed', 'r', '9', 'u', 'thsottiaux', '2026-10-29T07:00:00Z', '', NULL, 'confirmed', '[]', '2026-10-29T07:01:00Z')").run();
-    const l = msg("evt_codex_9_landed");
+    await e.DB.prepare("INSERT INTO events (id, product, stage, reset_id, post_id, post_url, author, posted_at, text, eta, confidence, confirmations, created_at) VALUES ('evt_codex_8_landed', 'codex', 'landed', 'r', '8', 'u', 'thsottiaux', '2026-10-29T07:00:00Z', 'Lands by midnight PST.', NULL, 'confirmed', '[]', '2026-10-29T07:01:00Z')").run();
+    const l = msg("evt_codex_8_landed");
     await handleBatch(l.b, e, g.f);
     expect(l.out.acked).toBe(true);
-    expect(g.calls.length).toBe(1);
+    expect(g.calls[1].body.message).toContain("Lands by midnight PST.");
+
+    await e.DB.prepare("INSERT INTO events (id, product, stage, reset_id, post_id, post_url, author, posted_at, text, eta, confidence, confirmations, created_at) VALUES ('evt_codex_7_banked', 'codex', 'banked', 'r', '7', 'u', 'thsottiaux', '2026-10-29T08:00:00Z', 'card', NULL, 'confirmed', '[]', '2026-10-29T08:01:00Z')").run();
+    const bk = msg("evt_codex_7_banked");
+    await handleBatch(bk.b, e, g.f);
+    expect(bk.out.acked).toBe(true);
+    expect(g.calls.length).toBe(2);
   });
 });
 

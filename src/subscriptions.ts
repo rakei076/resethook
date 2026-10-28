@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { postSigned, UA, type SubRow } from "./deliver";
-import { encryptKey, grokTestMessage, isGrokUrl, postGrok, decryptKey } from "./grok";
+import { encryptKey, grokMessage, grokTestMessage, isGrokUrl, postGrok, decryptKey } from "./grok";
+import { eventPayload } from "./payload";
+import { rowToEvent } from "./db";
 import { randomToken, sha256Hex } from "./sign";
 import { parseEvents, validateHookUrl } from "./url";
 import { API_VERSION } from "./payload";
@@ -10,6 +12,8 @@ import type { Env } from "./types";
 const HOUR = 3600;
 // 500 keeps one event within a free-plan invocation (5 queue batches) and the daily queue budget (~3 operations per delivery)
 const MAX_ACTIVE = 500;
+// a Grok Bot gets every Codex reset post and judges from the text whether it already landed
+const GROK_EVENTS = ["codex.reset.announced", "codex.reset.landed", "codex.reset.retracted"];
 const MAX_PER_URL = 3;
 const MAX_ATTEMPTS_PER_URL = 6; // per hour, from anyone
 const PING_PER_HOUR = 5;
@@ -70,15 +74,17 @@ export function subscriptionRoutes(f: typeof fetch = fetch) {
     if (typeof u === "string") return c.json({ error: u }, 400);
     // A Grok Bot routine: deliver a plain message with its Bearer key, to the Grok host only.
     const grok = typeof body.grok_key === "string";
-    const grokKey = grok ? body.grok_key!.trim().replace(/^Bearer\s+/i, "") : "";
+    // people paste the key, "Bearer <key>" or the whole "Authorization: Bearer <key>" line
+    const grokKey = grok ? body.grok_key!.trim().replace(/^authorization:\s*/i, "").replace(/^bearer\s+/i, "").trim() : "";
     const lang = body.lang === "zh" ? "zh" : "en";
     if (grok) {
       if (!isGrokUrl(u)) return c.json({ error: "this is not a Grok Bot webhook url (it starts with https://api2.cursor.sh/)" }, 400);
       if (!grokKey || grokKey.length > 512) return c.json({ error: "the webhook key is missing" }, 400);
+      if (/^https?:/i.test(grokKey)) return c.json({ error: "the key field holds a url, not the key" }, 400);
       if (!/^[\x21-\x7e]+$/.test(grokKey)) return c.json({ error: "the webhook key has characters a key cannot have" }, 400);
       if (!env.KEY_SECRET) return c.json({ error: "grok delivery is not configured on this server" }, 503);
     }
-    const events = body.events === undefined ? (grok ? ["codex.reset.announced", "codex.reset.retracted"] : ["*"]) : parseEvents(body.events);
+    const events = body.events === undefined ? (grok ? GROK_EVENTS : ["*"]) : parseEvents(body.events);
     if (typeof events === "string") return c.json({ error: events }, 400);
 
     const ip = clientIp(c.req.raw);
@@ -119,11 +125,13 @@ export function subscriptionRoutes(f: typeof fetch = fetch) {
     }
 
     // Proof the owner wants this: a webhook echoes a challenge; a Grok routine accepts its own key with our test message.
-    const accepted = grok ? (await postGrok(u.href, grokKey, grokTestMessage(lang), UA(env), f)).ok : await challenge(env, u.href, f);
+    const grokRes = grok ? await postGrok(u.href, grokKey, grokTestMessage(lang), UA(env), f) : null;
+    const accepted = grok ? grokRes!.ok : await challenge(env, u.href, f);
     if (!accepted) {
       await env.DB.prepare("UPDATE subscriptions SET status = 'rejected' WHERE id = ?").bind(id).run();
+      if (grok) console.warn("grok sign-up refused", grokRes!.status);
       return grok
-        ? c.json({ error: "Grok did not accept the test message: check the webhook url and key" }, 400)
+        ? c.json({ error: `Grok did not accept the test message (HTTP ${grokRes!.status ?? "no answer"})`, grok_status: grokRes!.status }, 400)
         : c.json({ error: "challenge failed: respond 200 with the challenge string (plain text or {\"challenge\": ...}) within 10 seconds" }, 400);
     }
     await env.DB.prepare("UPDATE subscriptions SET status = 'active' WHERE id = ?").bind(id).run();
@@ -168,9 +176,17 @@ export function subscriptionRoutes(f: typeof fetch = fetch) {
     if ((recent?.n ?? 0) >= PING_PER_HOUR) return c.json({ error: "at most 5 test pings per hour" }, 429);
     const id = randomToken("evt_ping_", 8);
     const body = { id, type: "ping", created_at: new Date().toISOString(), api_version: API_VERSION, data: { message: "Test ping from ResetHook" } };
+    const lang = sub.lang === "zh" ? "zh" : "en";
+    let message = grokTestMessage(lang);
+    // ?sample=latest: replay the latest real reset post, marked as a test, so the owner can see how the bot judges it
+    if (sub.kind === "grok" && c.req.query("sample") === "latest") {
+      const row = await c.env.DB.prepare("SELECT * FROM events WHERE product = 'codex' AND stage IN ('announced', 'landed') AND retracted = 0 ORDER BY posted_at DESC LIMIT 1").first();
+      const real = row ? grokMessage(eventPayload(rowToEvent(row)), lang) : null;
+      if (real) message = (lang === "zh" ? "【测试：这是最近一条真实的重置帖子，重新发一次给你看】\n" : "[Test: the latest real reset post, sent again]\n") + real;
+    }
     const res =
       sub.kind === "grok"
-        ? await postGrok(sub.url, await decryptKey(c.env.KEY_SECRET!, sub.bearer_enc!), grokTestMessage(sub.lang === "zh" ? "zh" : "en"), UA(c.env), f)
+        ? await postGrok(sub.url, await decryptKey(c.env.KEY_SECRET!, sub.bearer_enc!), message, UA(c.env), f)
         : await postSigned(c.env, sub, { id, type: "ping" }, body, 1, f);
     await c.env.DB.prepare("INSERT INTO deliveries (subscription_id, event_id, attempt, http_status, ok, at) VALUES (?, ?, 1, ?, ?, ?)").bind(sub.id, id, res.status, res.ok ? 1 : 0, nowSec()).run();
     return c.json({ delivered: res.ok, http_status: res.status });

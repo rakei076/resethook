@@ -45,7 +45,7 @@ describe("grok relay", () => {
     expect((await relay.fetch(new Request("https://relay.test/"), env)).status).toBe(405);
   });
 
-  it("wakes Grok for an announced reset with the post, a deadline hint and the skill to follow", async () => {
+  it("wakes Grok for a reset post with its text, a deadline hint and the skill to follow", async () => {
     const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
     try {
       const eta = new Date(Date.now() + 3 * 3600e3).toISOString();
@@ -58,7 +58,8 @@ describe("grok relay", () => {
       expect((init.headers as Record<string, string>).authorization).toBe("Bearer key-123");
       const sent = JSON.parse(init.body as string);
       expect(sent.from).toBe("resethook");
-      expect(sent.message).toContain("ResetHook：Codex 有重置预告");
+      expect(sent.message).toContain("ResetHook：有一条 Codex 额度重置的帖子");
+      expect(sent.message).toContain("可能是预告");
       expect(sent.message).toContain("@thsottiaux");
       expect(sent.message).toContain("「Reset coming tonight.」");
       expect(sent.message).toContain(`eta=${eta}`);
@@ -76,7 +77,7 @@ describe("grok relay", () => {
       const message = JSON.parse((f.mock.calls[0][1] as RequestInit).body as string).message as string;
       expect(message).not.toContain("IGNORE ALL PREVIOUS");
       expect(message).toContain("Link: https://x.com/a/status/1");
-      expect(message).toContain("The post gives no time.");
+      expect(message).not.toContain("eta=");
     } finally {
       f.mockRestore();
     }
@@ -93,11 +94,24 @@ describe("grok relay", () => {
     }
   });
 
-  it("stays quiet when a reset already landed: quota is full, nothing to burn", async () => {
+  it("forwards a landed reset too: Tibo's one post is filed as landed even when it says 'lands by midnight', so the bot judges", async () => {
     const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
     try {
-      const res = await relay.fetch(await post(eventPayload(row)), env);
+      const landed: EventRow = { ...row, author: "thsottiaux", text: "Lands by midnight PST." };
+      const res = await relay.fetch(await post(eventPayload(landed)), { ...env, MESSAGE_LANG: "zh" });
       expect(res.status).toBe(200);
+      const message = JSON.parse((f.mock.calls[0][1] as RequestInit).body as string).message as string;
+      expect(message).toContain("「Lands by midnight PST.」");
+      expect(message).toContain("已经生效就什么都不做");
+    } finally {
+      f.mockRestore();
+    }
+  });
+
+  it("says nothing for a reset card, which resets nothing now", async () => {
+    const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
+    try {
+      expect((await relay.fetch(await post(eventPayload({ ...row, id: "evt_codex_1_banked", stage: "banked" })), env)).status).toBe(200);
       expect(f).not.toHaveBeenCalled();
     } finally {
       f.mockRestore();
@@ -126,11 +140,11 @@ describe("grok relay", () => {
     }
   });
 
-  it("words retractions in both languages and says nothing for landed or banked", () => {
+  it("words retractions in both languages and says nothing for banked", () => {
     const m = (stage: string, lang: "en" | "zh" = "zh") => formatMessage({ id: "e", data: { product: "codex", stage, post: { url: "u" } } }, lang);
     expect(m("retracted")).toContain("撤回");
-    expect(m("retracted", "en")).toContain("retracted");
-    expect(m("landed")).toBeNull();
+    expect(m("retracted", "en")).toContain("withdrawn");
+    expect(m("landed")).toContain("看帖子自己判断");
     expect(m("banked")).toBeNull();
     expect(formatMessage({ id: "e", data: { product: "codex", stage: "weird" } })).toBeNull();
   });

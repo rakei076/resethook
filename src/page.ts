@@ -10,13 +10,13 @@ const TEXT = {
   en: {
     desc: "Wake your Grok Bot when a Codex reset is announced, so it uses up the quota first. Free, no code.",
     h1: "Wake your Grok Bot before Codex resets.",
-    sub: "When a reset is announced, your bot gets the post and uses up the quota before it is wiped. Free, no code, three steps.",
+    sub: "When Tibo posts about a reset, your bot gets the post and uses up the quota before it is wiped. Free, no code, three steps.",
     viewX: "View on X",
   },
   zh: {
     desc: "Codex 预告重置时叫醒你的 Grok Bot，在重置前把额度用完。免费，不用写代码。",
     h1: "Codex 要重置时，叫醒你的 Grok Bot。",
-    sub: "一有重置预告，Bot 就收到原帖，在重置前把额度用完。免费，不用写代码，三步接好。",
+    sub: "Tibo 一发重置的帖子，Bot 就收到原文，在重置前把额度用完。免费，不用写代码，三步接好。",
     viewX: "在 X 上查看",
   },
 };

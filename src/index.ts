@@ -116,12 +116,12 @@ app.get("/skill/*", (c) => {
 app.get("/manage", (c) => {
   const zh = pickLang(c.req.query("lang")) === "zh";
   const T = zh
-    ? { title: "管理 ResetHook", loading: "读取中…", bad: "链接不完整或已失效。", st: { active: "运行中", disabled: "已停用（连续发送失败）", pending: "等待验证", rejected: "没接通" }, test: "发一条测试", del: "停用并删除", sure: "确定删除？删除后不会再收到提醒。", sent: "测试已发出。", fail: "没发出去：", gone: "已删除。", grok: "Grok Bot", hook: "Webhook", back: "回首页" }
-    : { title: "Manage ResetHook", loading: "Loading…", bad: "This link is incomplete or no longer valid.", st: { active: "Running", disabled: "Off (too many failed deliveries)", pending: "Waiting for verification", rejected: "Not connected" }, test: "Send a test", del: "Turn off and delete", sure: "Delete it? You will stop getting alerts.", sent: "Test sent.", fail: "Not delivered: ", gone: "Deleted.", grok: "Grok Bot", hook: "Webhook", back: "Home" };
+    ? { title: "管理 ResetHook", loading: "读取中…", bad: "链接不完整或已失效。", st: { active: "运行中", disabled: "已停用（连续发送失败）", pending: "等待验证", rejected: "没接通" }, test: "发一条测试", sample: "用最近一条真实帖子测试", del: "停用并删除", sure: "确定删除？删除后不会再收到提醒。", sent: "测试已发出。", fail: "没发出去：", gone: "已删除。", grok: "Grok Bot", hook: "Webhook", back: "回首页" }
+    : { title: "Manage ResetHook", loading: "Loading…", bad: "This link is incomplete or no longer valid.", st: { active: "Running", disabled: "Off (too many failed deliveries)", pending: "Waiting for verification", rejected: "Not connected" }, test: "Send a test", sample: "Test with the latest real post", del: "Turn off and delete", sure: "Delete it? You will stop getting alerts.", sent: "Test sent.", fail: "Not delivered: ", gone: "Deleted.", grok: "Grok Bot", hook: "Webhook", back: "Home" };
   return c.html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>${T.title}</title>
 <body style="font:16px/1.6 system-ui;max-width:560px;margin:2em auto;padding:0 16px;color-scheme:light dark"><h1 style="font-size:22px">${T.title}</h1>
 <p id="info">${T.loading}</p><p id="msg"></p>
-<p><button id="test" hidden>${T.test}</button> <button id="del" hidden>${T.del}</button></p><p><a href="/">${T.back}</a></p>
+<p><button id="test" hidden>${T.test}</button> <button id="sample" hidden>${T.sample}</button> <button id="del" hidden>${T.del}</button></p><p><a href="/">${T.back}</a></p>
 <script>
 const T = ${JSON.stringify(T).replace(/</g, "\\u003c")};
 const [id, token] = location.hash.slice(1).split(".");
@@ -134,9 +134,12 @@ const info = document.getElementById("info"), msg = document.getElementById("msg
   const s = await r.json();
   info.textContent = (s.kind === "grok" ? T.grok : T.hook) + " · " + (T.st[s.status] || s.status) + " · " + s.events.join(", ");
   document.getElementById("test").hidden = document.getElementById("del").hidden = false;
+  document.getElementById("sample").hidden = s.kind !== "grok";
 })();
-document.getElementById("test").onclick = async () => { const j = await (await call("/test", "POST")).json(); msg.textContent = j.delivered ? T.sent : T.fail + (j.error || j.http_status); };
-document.getElementById("del").onclick = async () => { if (!confirm(T.sure)) return; await call("", "DELETE"); info.textContent = T.gone; msg.textContent = ""; document.getElementById("test").hidden = document.getElementById("del").hidden = true; };
+const test = async (q) => { const j = await (await call("/test" + q, "POST")).json(); msg.textContent = j.delivered ? T.sent : T.fail + (j.error || j.http_status); };
+document.getElementById("test").onclick = () => test("");
+document.getElementById("sample").onclick = () => test("?sample=latest");
+document.getElementById("del").onclick = async () => { if (!confirm(T.sure)) return; await call("", "DELETE"); info.textContent = T.gone; msg.textContent = ""; document.getElementById("test").hidden = document.getElementById("del").hidden = document.getElementById("sample").hidden = true; };
 </script></body>`);
 });
 

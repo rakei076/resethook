@@ -226,7 +226,7 @@ footer { margin-top: 28px; font: 12px/1.7 var(--mono); color: var(--mut); displa
       <p class="hint" data-t="s2hint"></p>
       <form id="g">
         <label class="field"><span data-t="urlLabel"></span><input id="gu" type="url" required placeholder="https://api2.cursor.sh/…" autocomplete="off"></label>
-        <label class="field"><span>key</span><input id="gk" type="password" required autocomplete="off" spellcheck="false"></label>
+        <label class="field"><span>key</span><input id="gk" type="text" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="crsr_…" data-1p-ignore data-lpignore="true"></label>
         {{TURNSTILE}}
         <div class="actions"><button class="btn" type="submit" id="gbtn" data-t="connect"></button></div>
         <p class="err" id="gerr" role="alert"></p>
@@ -351,13 +351,14 @@ curl "{{BASE}}/api/v1/events?product=codex&amp;limit=5"
     s2hint: "They are in the routine's settings in Grok Bot. The key is stored encrypted and used only to message your bot.",
     urlLabel: "URL", connect: "Connect", s3: "When \u201cResetHook test\u201d shows up in Grok, you are done",
     connected: "Connected. A test message was sent to your Grok Bot.", manageNote: "Manage link (send a test, turn it off). Bookmark it:",
-    statusTitle: "Right now", devTitle: "Other ways: your own server, API, RSS",
+    statusTitle: "Right now",
+    grokWhy: (s) => s === 401 || s === 403 ? ` (HTTP ${s}: the key does not match this URL. Copy both from the same routine.)` : s === 404 ? ` (HTTP 404: no such webhook. Save and turn on the routine, then copy the URL again.)` : s === 402 || s === 429 ? ` (HTTP ${s}: Grok refused for credit or rate limits. Check your Grok Bot balance.)` : s ? ` (HTTP ${s} from Grok.)` : " (Grok did not answer. Try again.)", devTitle: "Other ways: your own server, API, RSS",
     prompt: `Please connect me to ResetHook (Codex reset alerts):
 1. Install this skill and follow it from now on: run  curl -fsSL {{BASE}}/skill/install.sh | sh  then read ~/.resethook/skill/SKILL.en.md
 2. If your computer has no Codex CLI yet, install it, and send me the link or code when it asks me to log in.
 3. Create a routine named "ResetHook", triggered by Webhook, with the instruction: "This message is from ResetHook. Handle it with the resethook skill."
 4. Then tell me where to copy that webhook's URL and key. Do not post the key in the chat.`,
-    errs: [["not a Grok Bot webhook", "This is not a Grok Bot webhook URL. It starts with https://api2.cursor.sh/"], ["did not accept", "Grok did not accept the test message. Check that the URL and key are complete."], ["too many attempts", "Too many tries. Try again in an hour."], ["turnstile", "The human check failed. Reload and try again."]],
+    errs: [["holds a url", "The key field has the URL in it. Copy the key from the routine (it starts with crsr)."], ["not a Grok Bot webhook", "This is not a Grok Bot webhook URL. It starts with https://api2.cursor.sh/"], ["did not accept", "Grok did not accept the test message."], ["too many attempts", "Too many tries. Try again in an hour."], ["turnstile", "The human check failed. Reload and try again."]],
   },
   zh: {
     api: "接口", other: "English", otherHref: "?lang=en",
@@ -381,13 +382,14 @@ curl "{{BASE}}/api/v1/events?product=codex&amp;limit=5"
     s2hint: "在 Grok Bot 的例行任务设置里能找到。key 加密保存，只用来给你的 Bot 发消息。",
     urlLabel: "网址", connect: "连接", s3: "Grok 里收到「ResetHook 测试」，就接好了",
     connected: "已接通，测试消息已经发到你的 Grok Bot。", manageNote: "管理链接（发测试、停用都在这里），请收藏：",
-    statusTitle: "现在的状态", devTitle: "其他接法：自己的服务器、API、RSS",
+    statusTitle: "现在的状态",
+    grokWhy: (s) => s === 401 || s === 403 ? `（HTTP ${s}：key 和网址对不上，请从同一个例行任务里复制。）` : s === 404 ? `（HTTP 404：找不到这个 Webhook，请先保存并启用例行任务，再复制网址。）` : s === 402 || s === 429 ? `（HTTP ${s}：Grok 因余额或频率拒收，请看一下 Grok Bot 的余额。）` : s ? `（Grok 返回 HTTP ${s}。）` : "（Grok 没有响应，请再试一次。）", devTitle: "其他接法：自己的服务器、API、RSS",
     prompt: `帮我接入 ResetHook（Codex 额度重置提醒）：
 1. 安装这个 skill，以后按它办：运行  curl -fsSL {{BASE}}/skill/install.sh | sh  然后读 ~/.resethook/skill/SKILL.md
 2. 如果你的电脑上还没有 Codex 命令行，装上它，登录时把链接或验证码发给我。
 3. 新建一个例行任务，名字叫「ResetHook」，触发方式选 Webhook，指令写：「这条消息来自 ResetHook，按 resethook skill 处理。」
 4. 建好后告诉我去哪里复制这个 Webhook 的网址和 key。key 不要发在聊天里。`,
-    errs: [["not a Grok Bot webhook", "这不是 Grok Bot 的 Webhook 网址，它应该以 https://api2.cursor.sh/ 开头。"], ["did not accept", "Grok 没收下测试消息，检查网址和 key 有没有复制完整。"], ["too many attempts", "试得太多了，一小时后再试。"], ["turnstile", "人机验证没通过，刷新页面再试。"]],
+    errs: [["holds a url", "key 栏里粘的是网址，不是 key。请在例行任务里复制 key（以 crsr 开头）。"], ["not a Grok Bot webhook", "这不是 Grok Bot 的 Webhook 网址，它应该以 https://api2.cursor.sh/ 开头。"], ["did not accept", "Grok 没收下测试消息。"], ["too many attempts", "试得太多了，一小时后再试。"], ["turnstile", "人机验证没通过，刷新页面再试。"]],
   },
 }[LANG];
 document.querySelectorAll("[data-t]").forEach((e) => { if (L[e.dataset.t] !== undefined && !e.textContent.trim()) e.textContent = L[e.dataset.t]; });
@@ -562,7 +564,13 @@ $("#g").addEventListener("submit", async (e) => {
   try {
     const r = await fetch("/api/v1/subscriptions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: $("#gu").value.trim(), grok_key: $("#gk").value, lang: LANG, turnstile_token: document.querySelector('[name="cf-turnstile-response"]')?.value || undefined }) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { const hit = L.errs.find(([k]) => (j.error || "").includes(k)); $("#gerr").textContent = hit ? hit[1] : j.error || String(r.status); window.turnstile?.reset(); return; }
+    if (!r.ok) {
+      const hit = L.errs.find(([k]) => (j.error || "").includes(k));
+      const why = j.grok_status !== undefined ? L.grokWhy(j.grok_status) : "";
+      $("#gerr").textContent = (hit ? hit[1] : j.error || String(r.status)) + why;
+      window.turnstile?.reset();
+      return;
+    }
     $("#manage").textContent = j.manage_url;
     $("#done").classList.add("show");
     $("#gk").value = "";

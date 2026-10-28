@@ -14,7 +14,7 @@ On https://resethook.rakel.top/?lang=en, no code:
 2. Paste the routine's webhook URL and key into the page and press Connect.
 3. When "ResetHook test" shows up in Grok, you are connected. The page gives a manage link for tests and turning it off.
 
-From then on, each reset announcement brings the bot the post, its author, a link and a parsed deadline; the bot decides with the skill whether to burn quota. Resets that already happened are not sent.
+From then on, every Codex reset post from Tibo reaches the bot with its text, author, link and a parsed deadline. The post may announce a reset or say it already landed; the bot decides with the skill whether to burn quota.
 
 ## Skill
 
