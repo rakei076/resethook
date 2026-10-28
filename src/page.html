@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f5c518' d='M4 0h3v1H6v2h2v2H5v1h2v2H5v1H4v1H3v1H2v-2h1V8h1V7H2V5h1V3h1z'/%3E%3C/svg%3E">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<style>
+:root {
+  --bg: oklch(0.17 0.025 275);
+  --panel: oklch(0.21 0.03 275);
+  --line: oklch(0.32 0.035 275);
+  --off: oklch(0.26 0.03 275);
+  --ink: oklch(0.96 0.01 275);
+  --mut: oklch(0.76 0.025 275);
+  --codex: oklch(0.84 0.18 158);
+  --claude: oklch(0.76 0.15 48);
+  --spark: oklch(0.9 0.16 95);
+  --on-spark: oklch(0.22 0.04 95);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: oklch(0.975 0.006 275);
+    --panel: oklch(1 0 0);
+    --line: oklch(0.86 0.015 275);
+    --off: oklch(0.92 0.012 275);
+    --ink: oklch(0.2 0.03 275);
+    --mut: oklch(0.45 0.03 275);
+    --codex: oklch(0.6 0.16 158);
+    --claude: oklch(0.64 0.16 45);
+    --spark: oklch(0.82 0.17 90);
+    --on-spark: oklch(0.22 0.04 95);
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; color: var(--ink); font: 16px/1.5 var(--sans); background: var(--bg); min-height: 100vh; }
+main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 56px; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 15px/1 var(--mono); letter-spacing: .02em; text-decoration: none; }
+.brand svg { width: 22px; height: 22px; color: var(--spark); }
+nav { display: flex; gap: 18px; font: 14px var(--mono); color: var(--mut); }
+nav a { text-decoration: none; padding: 6px 0; }
+nav a:hover { color: var(--ink); }
+
+h1 { font: 700 clamp(28px, 5.4vw, 48px)/1.08 var(--sans); letter-spacing: -.02em; margin: 36px 0 8px; text-wrap: balance; }
+.sub { color: var(--mut); margin: 0 0 28px; max-width: 52ch; text-wrap: pretty; }
+
+/* the three setup steps */
+.steps { list-style: none; margin: 0 0 28px; padding: 0; display: grid; gap: 16px; counter-reset: step; }
+.steps > li { background: var(--panel); border: 1px solid var(--line); padding: 20px; counter-increment: step; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 4px 14px; }
+.steps > li::before { content: counter(step); grid-row: span 3; width: 36px; height: 36px; display: grid; place-items: center; background: var(--spark); color: var(--on-spark); font: 700 18px var(--mono); }
+.steps h2 { font: 700 17px/1.4 var(--sans); margin: 6px 0 10px; }
+.steps .hint { color: var(--mut); font-size: 14px; margin: 0 0 12px; }
+.prompt { margin: 0 0 12px; padding: 14px 16px; background: var(--bg); border: 1px solid var(--line); font: 14px/1.7 var(--sans); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+@media (max-width: 560px) {
+  .steps > li { padding: 16px; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 10px; }
+  .steps > li::before { grid-row: auto; width: 28px; height: 28px; font-size: 15px; }
+  .steps > li > :not(h2) { grid-column: 1 / -1; }
+  .steps h2 { margin: 2px 0 8px; font-size: 16px; }
+}
+.steps form { max-width: 640px; }
+.steps .field span { min-width: 72px; }
+.done { display: none; border: 1px solid var(--codex); padding: 14px 16px; }
+.done.show { display: block; }
+.done b { color: var(--codex); }
+.done code { display: block; word-break: break-all; margin: 8px 0; font: 13px var(--mono); }
+.status-title { font: 700 14px var(--mono); color: var(--mut); margin: 8px 0 12px; }
+.dev summary { font: 700 14px var(--mono); }
+.dev .console { margin-top: 14px; border: 0; padding: 0; background: transparent; }
+
+/* the two charge cells */
+.cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }
+.cell { container-type: inline-size; position: relative; background: var(--panel); border: 1px solid var(--line); padding: 20px 20px 18px; overflow: hidden; --c: var(--codex); }
+.cell[data-p="claude"] { --c: var(--claude); }
+.cell-head { display: flex; align-items: center; justify-content: space-between; font: 14px var(--mono); }
+.cell-head b { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.swatch { width: 10px; height: 10px; background: var(--c); }
+.state { color: var(--mut); }
+.state.due { color: var(--ink); font-weight: 700; }
+.state.due::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; background: var(--c); animation: blink 1.2s steps(2) infinite; }
+.timer { display: block; width: 100%; margin: 18px 0 4px; color: var(--ink); }
+.timer svg { display: block; width: calc(var(--cols) * min(6px, (100cqw - 40px) / 84)); height: auto; }
+.timer .chg { animation: glitch .24s steps(2); }
+.cap { font: 13px var(--mono); color: var(--mut); margin: 0 0 14px; }
+
+.bar { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; margin-bottom: 14px; }
+.bar i { height: 30px; background: var(--off); transition: background-color .2s steps(2), transform .2s steps(2); }
+.bar i.on { background: var(--c); }
+.bar i.lead { animation: blink 1s steps(2) infinite; }
+.bar.due i.on { animation: march 1.6s steps(8) infinite; animation-delay: calc(var(--i) * 40ms); }
+.bar i.out { background: var(--off); transform: translateY(6px); }
+.flash .bar i.on { background: var(--ink); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; }
+.chip { font: 13px var(--mono); padding: 4px 10px; border: 1px solid var(--line); color: var(--ink); }
+.chip b { color: var(--c); }
+
+/* receiver console */
+.console { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); padding: 20px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 820px) { .console { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+.console h2 { font: 700 14px var(--mono); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.console h2 svg { width: 16px; height: 16px; color: var(--spark); }
+form { display: grid; gap: 12px; }
+.field { display: flex; align-items: stretch; border: 1px solid var(--line); background: var(--bg); }
+.field:focus-within { border-color: var(--spark); }
+.field span { font: 13px var(--mono); color: var(--mut); padding: 0 10px; display: flex; align-items: center; border-right: 1px solid var(--line); }
+.field input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--ink); font: 14px var(--mono); padding: 12px; outline: 0; }
+.field input::placeholder { color: var(--mut); }
+.toggles { display: flex; gap: 8px; }
+.toggle { font: 13px var(--mono); padding: 8px 12px; background: transparent; color: var(--mut); border: 1px solid var(--line); cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.toggle .swatch { background: var(--off); }
+.toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+.toggle[aria-pressed="true"] .swatch { background: var(--c); }
+.toggle[data-p="codex"] { --c: var(--codex); }
+.toggle[data-p="claude"] { --c: var(--claude); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { font: 700 14px var(--mono); padding: 12px 18px; border: 0; cursor: pointer; background: var(--spark); color: var(--on-spark); box-shadow: 4px 4px 0 var(--line); transition: transform .08s steps(2), box-shadow .08s steps(2); }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--line); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--line); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+.btn.ghost:hover { border-color: var(--ink); transform: none; box-shadow: none; }
+.err { color: oklch(0.72 0.17 25); font: 13px var(--mono); min-height: 20px; margin: 0; }
+@media (prefers-color-scheme: light) { .err { color: oklch(0.5 0.2 25); } }
+
+.log { background: var(--bg); border: 1px solid var(--line); font: 12.5px/1.65 var(--mono); padding: 14px 16px; min-height: 196px; overflow-x: auto; white-space: pre; color: var(--mut); }
+.log .ok { color: var(--codex); }
+.log .k { color: var(--ink); }
+.log .tag { color: var(--on-spark); background: var(--spark); padding: 0 5px; margin-left: 6px; }
+.log .cur { display: inline-block; width: 8px; height: 14px; background: var(--spark); vertical-align: -2px; animation: blink 1s steps(2) infinite; }
+.secret { display: none; margin-top: 4px; border: 1px solid var(--spark); padding: 12px; font: 13px var(--mono); }
+.secret.show { display: block; }
+.secret code { display: block; white-space: pre-wrap; word-break: break-all; margin: 6px 0 10px; color: var(--ink); }
+.toast-wrap { position: fixed; left: 0; right: 0; bottom: 24px; display: flex; justify-content: center; z-index: 30; pointer-events: none; }
+.secret small { color: var(--mut); }
+
+/* 14-day strip */
+.strip { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); padding: 18px 20px; }
+.strip h2 { font: 700 14px var(--mono); margin: 0 0 14px; }
+.row { display: grid; grid-template-columns: 74px repeat(14, 1fr); gap: 4px; align-items: center; margin-bottom: 6px; font: 12px var(--mono); color: var(--mut); }
+.day { aspect-ratio: 1; background: var(--off); display: grid; place-items: center; text-decoration: none; position: relative; }
+.row[data-p="codex"] { --c: var(--codex); }
+.row[data-p="claude"] { --c: var(--claude); }
+.day.hit { background: var(--c); color: var(--bg); }
+.day.hit svg { width: 60%; height: 60%; }
+.day.card { background: transparent; border: 2px solid var(--c); }
+.day.today { outline: 2px dashed var(--mut); outline-offset: 2px; }
+a.day:hover { transform: translateY(-3px); }
+.axis { display: grid; grid-template-columns: 74px 1fr 1fr; font: 12px var(--mono); color: var(--mut); margin-top: 4px; }
+.axis span:last-child { text-align: right; }
+.axis span:first-child { grid-column: 2; }
+
+.post { margin-top: 16px; display: grid; gap: 6px; padding: 0 2px; color: var(--mut); font-size: 14px; }
+.post q { color: var(--ink); font-size: 15px; quotes: none; }
+.post blockquote { margin: 0; color: var(--ink); font-size: 15px; }
+.post blockquote p { margin: 0 0 4px; }
+.post q::before { content: "“"; } .post q::after { content: "”"; }
+details { margin-top: 16px; border: 1px solid var(--line); background: var(--panel); padding: 14px 20px; }
+summary { cursor: pointer; font: 700 14px var(--mono); }
+details pre { margin: 12px 0 0; font: 13px/1.6 var(--mono); overflow-x: auto; color: var(--mut); }
+footer { margin-top: 28px; font: 12px/1.7 var(--mono); color: var(--mut); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+
+/* effects */
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 20; overflow: hidden; }
+.spark-px { position: absolute; width: 8px; height: 8px; background: var(--c, var(--spark)); animation: fly .8s steps(9) forwards; }
+.packet { position: absolute; width: 28px; height: 20px; color: var(--spark); }
+.toast { background: var(--spark); color: var(--on-spark); font: 700 14px var(--mono); padding: 12px 18px; z-index: 30; box-shadow: 4px 4px 0 var(--line); animation: pop .3s steps(4); }
+.cf-turnstile { min-height: 65px; }
+
+@keyframes blink { 50% { opacity: .25; } }
+@keyframes glitch { 0% { transform: translateY(-3%); opacity: .5; } 100% { transform: none; opacity: 1; } }
+@keyframes march { 0%, 100% { filter: none; } 50% { filter: brightness(1.45); } }
+@keyframes fly { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes pop { from { transform: translateY(24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="bolt" viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M4 0h3v1H6v2h2v2H5v1h2v2H5v1H4v1H3v1H2v-2h1V8h1V7H2V5h1V3h1z"/></symbol>
+  <symbol id="hook" viewBox="0 0 8 12" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v6h1v3H5v1H3V9H2V8h1v1h1V8h1V6H3z"/></symbol>
+  <symbol id="mail" viewBox="0 0 14 10" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h14v10H0zM2 2v1h1v1h1v1h1v1h4V5h1V4h1V3h1V2h-1v1h-1v1H9v1H5V4H4V3H3V2z" fill-rule="evenodd"/></symbol>
+</svg>
+
+<main>
+  <header>
+    <a class="brand" href="/"><svg><use href="#hook"/></svg>ResetHook</a>
+    <nav><a href="#api" data-t="api" onclick="document.getElementById('api').open=true"></a><a href="/feed.xml">Atom</a><a id="langlink" href="#"></a></nav>
+  </header>
+
+  <h1 data-t="h1">{{H1}}</h1>
+  <p class="sub" data-t="sub">{{SUB}}</p>
+
+  <ol class="steps" id="setup">
+    <li>
+      <h2 data-t="s1"></h2>
+      <pre class="prompt" id="prompt"></pre>
+      <div class="actions"><button class="btn" type="button" id="copyPrompt" data-t="copyPrompt"></button></div>
+    </li>
+    <li>
+      <h2 data-t="s2"></h2>
+      <p class="hint" data-t="s2hint"></p>
+      <form id="g">
+        <label class="field"><span data-t="urlLabel"></span><input id="gu" type="url" required placeholder="https://api2.cursor.sh/…" autocomplete="off"></label>
+        <label class="field"><span>key</span><input id="gk" type="password" required autocomplete="off" spellcheck="false"></label>
+        {{TURNSTILE}}
+        <div class="actions"><button class="btn" type="submit" id="gbtn" data-t="connect"></button></div>
+        <p class="err" id="gerr" role="alert"></p>
+      </form>
+    </li>
+    <li>
+      <h2 data-t="s3"></h2>
+      <div class="done" id="done"><b data-t="connected"></b><br><span data-t="manageNote"></span><code id="manage"></code><button class="btn ghost" type="button" id="copyManage" data-t="copy"></button></div>
+    </li>
+  </ol>
+
+  <h2 class="status-title" data-t="statusTitle"></h2>
+  <section class="cells" id="cells" data-aria="cellsLabel"></section>
+
+
+  <section class="strip" data-aria="stripLabel">
+    <h2 data-t="strip"></h2>
+    <div id="rows"></div>
+    <div class="axis"><span data-t="ago"></span><span data-t="today"></span></div>
+  </section>
+
+  {{POST}}
+
+  <details class="dev" id="dev">
+  <summary data-t="devTitle"></summary>
+  <section class="console" id="console">
+    <div>
+      <h2><svg><use href="#mail"/></svg><span data-t="endpoint"></span></h2>
+      <form id="f">
+        <label class="field"><span>POST</span><input id="u" type="url" required data-ph="placeholder" placeholder="https://your.app/hooks/reset" autocomplete="off"></label>
+        <div class="toggles" role="group" data-aria="products">
+          <button type="button" class="toggle" data-p="codex" aria-pressed="true"><i class="swatch"></i>Codex</button>
+          <button type="button" class="toggle" data-p="claude" aria-pressed="false"><i class="swatch"></i>Claude</button>
+        </div>
+        <div class="actions">
+          <button class="btn" type="submit" data-t="create"></button>
+          <button class="btn ghost" type="button" id="sim"></button>
+        </div>
+        <p class="err" id="err" role="alert"></p>
+      </form>
+      <div class="secret" id="secret"><small data-t="secretNote"></small><code id="secretv"></code><div class="actions"><button class="btn ghost" type="button" id="copy"></button><button class="btn ghost" type="button" id="testbtn"></button></div></div>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+  </details>
+
+  <details id="api">
+    <summary data-t="api"></summary>
+    <pre id="apipre" data-h="apiPre"></pre>
+  </details>
+
+  <footer><span data-t="data"></span><span data-t="affil"></span><a href="/privacy" data-t="privacy"></a></footer>
+</main>
+<div id="fx" aria-hidden="true"></div>
+<div class="toast-wrap" id="toasts" role="status"></div>
+
+<script>
+const DATA = /*DATA*/{}/*END*/;
+const LANG = "{{LANGKEY}}";
+const SITEKEY = "{{SITEKEY}}";
+const SEGMENTS = 20;
+const PRODUCTS = ["codex", "claude"];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+/* 5x7 pixel glyphs, rendered as SVG so the clock needs no font file */
+const GL = {
+  0: "01110 10001 10011 10101 11001 10001 01110", 1: "00100 01100 00100 00100 00100 00100 01110",
+  2: "01110 10001 00001 00010 00100 01000 11111", 3: "11110 00001 00001 01110 00001 00001 11110",
+  4: "00010 00110 01010 10010 11111 00010 00010", 5: "11111 10000 11110 00001 00001 10001 01110",
+  6: "00110 01000 10000 11110 10001 10001 01110", 7: "11111 00001 00010 00100 01000 01000 01000",
+  8: "01110 10001 10001 01110 10001 10001 01110", 9: "01110 10001 10001 01111 00001 00010 01100",
+  d: "00001 00001 01101 10011 10001 10011 01101", h: "10000 10000 10110 11001 10001 10001 10001",
+  m: "00000 00000 11010 10101 10101 10101 10101", s: "00000 00000 01111 10000 01110 00001 11110",
+};
+for (const k in GL) GL[k] = GL[k].split(" ");
+
+function clock(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(t / 86400), h = Math.floor(t / 3600) % 24, m = Math.floor(t / 60) % 60, s = t % 60;
+  return (d ? `${d}d ` : "") + (d || h ? `${h}h ` : "") + `${m}m ${String(s).padStart(2, "0")}s`;
+}
+function drawClock(el, text) {
+  const prev = el._prev || "";
+  let x = 0, out = "";
+  [...text].forEach((ch, i) => {
+    if (ch === " ") { x += 3; return; }
+    const changed = prev.length === text.length && prev[i] !== ch;
+    out += `<g${changed ? ' class="chg"' : ""}>`;
+    GL[ch].forEach((row, y) => { for (let c = 0; c < 5; c++) if (row[c] === "1") out += `<rect x="${x + c}" y="${y}" width="1" height="1"/>`; });
+    out += "</g>";
+    x += 6;
+  });
+  el._prev = text;
+  el.innerHTML = `<svg style="--cols:${x - 1}" viewBox="0 0 ${x - 1} 7" shape-rendering="crispEdges" fill="currentColor" role="img" aria-label="${text}">${out}</svg>`;
+}
+
+/* ---- language (chosen by the server from ?lang or Accept-Language) ---- */
+const hoursText = (en) => (ms) => { const t = Math.floor(ms / 3600e3), d = Math.floor(t / 24), h = t % 24; return en ? (d ? `${d}d ${h}h` : `${h}h`) : d ? `${d} 天 ${h} 小时` : `${h} 小时`; };
+const L = {
+  en: {
+    api: "API", other: "中文", otherHref: "?lang=zh",
+    cellsLabel: "Time since the last reset", since: "since the last reset", median: "median gap",
+    rank: (n) => `longer than ${n}% of past gaps`, fresh: "reset recently", long: "unusually long wait", fewData: "not enough history",
+    justReset: "just reset", toast: (n) => `${n} usage just reset`, next: "next ≈", h24: "24h", h48: "48h",
+    endpoint: "Your endpoint", placeholder: "https://your.app/hooks/reset", products: "Products",
+    create: "Create webhook", sim: "Simulate a reset", back: "Back to live data", test: "Send a test",
+    pick: "Pick at least one product.", secretNote: "Save the secret and manage token now. They are shown once.", copy: "Copy", copied: "Copied", copyFail: "Select and copy",
+    idle: (b) => `${b("waiting for a reset")}\nPress ${b("Simulate a reset")} to watch a delivery,\nor create a webhook and real deliveries arrive here.`,
+    demo: "demo", subscribed: "subscribed to", echoed: "challenge echoed", delivered: "test delivered", failed: "test not delivered",
+    strip: "Last 14 days", stripLabel: "Last 14 days", ago: "14 days ago", today: "today", onX: (d, st) => `${d}: ${st} on X`,
+    stages: { landed: "reset", banked: "reset card" }, locale: "en",
+    data: "Data: codex-reset.com, whenreset.dev", affil: "Not affiliated with OpenAI or Anthropic", privacy: "Privacy",
+    apiPre: `curl {{BASE}}/api/v1/status
+curl "{{BASE}}/api/v1/events?product=codex&amp;limit=5"
+# every webhook carries  X-Resethook-Signature: t=&lt;unix&gt;,v1=&lt;hex&gt;
+# hex = HMAC-SHA256(secret, t + "." + raw body); reject if |now - t| &gt; 300 s`,
+    human: hoursText(true),
+    s1: "Send this to your Grok Bot", copyPrompt: "Copy", s2: "Paste the webhook URL and key your bot gives you",
+    s2hint: "They are in the routine's settings in Grok Bot. The key is stored encrypted and used only to message your bot.",
+    urlLabel: "URL", connect: "Connect", s3: "When \u201cResetHook test\u201d shows up in Grok, you are done",
+    connected: "Connected. A test message was sent to your Grok Bot.", manageNote: "Manage link (send a test, turn it off). Bookmark it:",
+    statusTitle: "Right now", devTitle: "Other ways: your own server, API, RSS",
+    prompt: `Please connect me to ResetHook (Codex reset alerts):
+1. Install this skill and follow it from now on: run  curl -fsSL {{BASE}}/skill/install.sh | sh  then read ~/.resethook/skill/SKILL.en.md
+2. If your computer has no Codex CLI yet, install it, and send me the link or code when it asks me to log in.
+3. Create a routine named "ResetHook", triggered by Webhook, with the instruction: "This message is from ResetHook. Handle it with the resethook skill."
+4. Then tell me where to copy that webhook's URL and key. Do not post the key in the chat.`,
+    errs: [["not a Grok Bot webhook", "This is not a Grok Bot webhook URL. It starts with https://api2.cursor.sh/"], ["did not accept", "Grok did not accept the test message. Check that the URL and key are complete."], ["too many attempts", "Too many tries. Try again in an hour."], ["turnstile", "The human check failed. Reload and try again."]],
+  },
+  zh: {
+    api: "接口", other: "English", otherHref: "?lang=en",
+    cellsLabel: "距上次重置的时间", since: "距上次重置", median: "常见间隔",
+    rank: (n) => `比 ${n}% 的历史间隔更久`, fresh: "刚重置不久", long: "等得比平时久", fewData: "历史数据还少",
+    justReset: "刚刚重置", toast: (n) => `${n} 刚刚重置`, next: "下次约", h24: "24 小时", h48: "48 小时",
+    endpoint: "你的接收地址", placeholder: "https://你的域名/hooks/reset", products: "产品",
+    create: "创建 Webhook", sim: "模拟一次重置", back: "回到真实数据", test: "发一次测试",
+    pick: "至少选一个产品。", secretNote: "请立即保存密钥和管理令牌，只显示一次。", copy: "复制", copied: "已复制", copyFail: "请手动选中复制",
+    idle: (b) => `${b("等待重置")}\n点「${b("模拟一次重置")}」看一次推送，\n或创建 Webhook，真实的推送会出现在这里。`,
+    demo: "演示", subscribed: "已订阅", echoed: "已回显验证串", delivered: "测试已送达", failed: "测试没有送达",
+    strip: "最近 14 天", stripLabel: "最近 14 天", ago: "14 天前", today: "今天", onX: (d, st) => `${d}：在 X 上查看${st}`,
+    stages: { landed: "重置", banked: "重置卡" }, locale: "zh-CN",
+    data: "数据：codex-reset.com、whenreset.dev", affil: "与 OpenAI、Anthropic 无关", privacy: "隐私",
+    apiPre: `curl {{BASE}}/api/v1/status
+curl "{{BASE}}/api/v1/events?product=codex&amp;limit=5"
+# 每条 webhook 都带 X-Resethook-Signature: t=&lt;unix&gt;,v1=&lt;hex&gt;
+# hex = HMAC-SHA256(密钥, t + "." + 原始请求体)；|现在 - t| 超过 300 秒就拒绝`,
+    human: hoursText(false),
+    s1: "把这段话发给你的 Grok Bot", copyPrompt: "复制", s2: "把 Bot 给你的 Webhook 网址和 key 粘到这里",
+    s2hint: "在 Grok Bot 的例行任务设置里能找到。key 加密保存，只用来给你的 Bot 发消息。",
+    urlLabel: "网址", connect: "连接", s3: "Grok 里收到「ResetHook 测试」，就接好了",
+    connected: "已接通，测试消息已经发到你的 Grok Bot。", manageNote: "管理链接（发测试、停用都在这里），请收藏：",
+    statusTitle: "现在的状态", devTitle: "其他接法：自己的服务器、API、RSS",
+    prompt: `帮我接入 ResetHook（Codex 额度重置提醒）：
+1. 安装这个 skill，以后按它办：运行  curl -fsSL {{BASE}}/skill/install.sh | sh  然后读 ~/.resethook/skill/SKILL.md
+2. 如果你的电脑上还没有 Codex 命令行，装上它，登录时把链接或验证码发给我。
+3. 新建一个例行任务，名字叫「ResetHook」，触发方式选 Webhook，指令写：「这条消息来自 ResetHook，按 resethook skill 处理。」
+4. 建好后告诉我去哪里复制这个 Webhook 的网址和 key。key 不要发在聊天里。`,
+    errs: [["not a Grok Bot webhook", "这不是 Grok Bot 的 Webhook 网址，它应该以 https://api2.cursor.sh/ 开头。"], ["did not accept", "Grok 没收下测试消息，检查网址和 key 有没有复制完整。"], ["too many attempts", "试得太多了，一小时后再试。"], ["turnstile", "人机验证没通过，刷新页面再试。"]],
+  },
+}[LANG];
+document.querySelectorAll("[data-t]").forEach((e) => { if (L[e.dataset.t] !== undefined && !e.textContent.trim()) e.textContent = L[e.dataset.t]; });
+document.querySelectorAll("[data-h]").forEach((e) => (e.innerHTML = L[e.dataset.h]));
+document.querySelectorAll("[data-aria]").forEach((e) => e.setAttribute("aria-label", L[e.dataset.aria]));
+document.querySelectorAll("[data-ph]").forEach((e) => (e.placeholder = L[e.dataset.ph]));
+$("#langlink").textContent = L.other; $("#langlink").href = L.otherHref;
+$("#sim").textContent = L.sim; $("#copy").textContent = L.copy; $("#testbtn").textContent = L.test;
+
+/* ---- state: last reset, gaps between past resets (hours), forecast ---- */
+const P = { codex: { name: "Codex", ...DATA.codex }, claude: { name: "Claude", ...DATA.claude } };
+const override = {}; // the simulation pretends a reset just happened
+let simulating = false;
+const lastMs = (p) => override[p] ?? (P[p].last ? Date.parse(P[p].last) : null);
+const median = (g) => { const a = [...g].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };
+/* share of past gaps that were shorter than the current wait: 0..1, or null with too little history */
+function rank(p) {
+  const l = lastMs(p), g = P[p].gaps;
+  if (l == null || g.length < 3) return null;
+  const w = (Date.now() - l) / 3600e3;
+  return g.filter((x) => x < w).length / g.length;
+}
+
+function chipsHtml(p) {
+  const d = P[p];
+  return (d.p24 != null ? `<span class="chip">${L.h24} <b>${d.p24}%</b></span><span class="chip">${L.h48} <b>${d.p48}%</b></span>` : "") +
+    (d.next ? `<span class="chip">${L.next} ${new Date(d.next).toLocaleDateString(L.locale, { month: "short", day: "numeric" })}</span>` : "");
+}
+function capText(p) { const m = median(P[p].gaps); return m == null ? L.since : `${L.since} · ${L.median} ${L.human(m * 3600e3)}`; }
+function buildCells() {
+  $("#cells").innerHTML = PRODUCTS.map((p) => `
+    <article class="cell" data-p="${p}">
+      <div class="cell-head"><b><i class="swatch"></i>${P[p].name}${p === "claude" ? ' <span class="state">beta</span>' : ""}</b><span class="state" id="st-${p}"></span></div>
+      <span class="timer" id="tm-${p}"></span>
+      <p class="cap" id="cap-${p}">${capText(p)}</p>
+      <div class="bar" id="bar-${p}">${Array.from({ length: SEGMENTS }, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+      <div class="chips" id="chips-${p}">${chipsHtml(p)}</div>
+    </article>`).join("");
+}
+function paintBar(p) {
+  const r = rank(p), lit = r == null ? 0 : Math.round(r * SEGMENTS), long = r != null && r >= 0.9, bar = $("#bar-" + p);
+  bar.classList.toggle("due", long);
+  [...bar.children].forEach((seg, i) => { seg.classList.toggle("on", i < lit); seg.classList.toggle("lead", !long && i === lit); seg.classList.remove("out"); });
+  const st = $("#st-" + p);
+  st.textContent = r == null ? L.fewData : long ? L.long : r < 0.1 ? L.fresh : L.rank(Math.round(r * 100));
+  st.classList.toggle("due", long);
+  $("#cap-" + p).textContent = capText(p);
+}
+function tick() {
+  for (const p of PRODUCTS) {
+    const l = lastMs(p);
+    drawClock($("#tm-" + p), l == null ? "0m 00s" : clock(Date.now() - l));
+    if (!tick.n || tick.n % 30 === 0) paintBar(p);
+  }
+  tick.n = (tick.n || 0) + 1;
+}
+
+/* ---- 14-day strip ---- */
+function buildStrip() {
+  const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (13 - i)); return d; });
+  const key = (d) => d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  $("#rows").innerHTML = PRODUCTS.map((p) => {
+    const cells = days.map((d, i) => {
+      const hit = DATA.events.filter((e) => e.p === p && key(new Date(e.at)) === key(d));
+      const today = i === 13 ? " today" : "";
+      const label = d.toLocaleDateString(L.locale, { month: "short", day: "numeric" });
+      if (!hit.length) return `<span class="day${today}" title="${label}"></span>`;
+      const card = hit.every((e) => e.stage === "banked");
+      return `<a class="day ${card ? "card" : "hit"}${today}" href="${esc(hit[0].url)}" target="_blank" rel="noopener" title="${esc(L.onX(label, L.stages[hit[0].stage]))}"><svg><use href="#bolt"/></svg></a>`;
+    }).join("");
+    return `<div class="row" data-p="${p}"><span>${P[p].name}</span>${cells}</div>`;
+  }).join("");
+}
+
+/* ---- console log ---- */
+const log = $("#log");
+function logLines(lines, speed = 140) {
+  return lines.reduce((chain, l) => chain.then(async () => { log.querySelector(".cur")?.remove(); log.innerHTML += l + "\n"; log.innerHTML += '<span class="cur"></span>'; log.scrollTop = log.scrollHeight; await wait(speed); }), Promise.resolve());
+}
+function idle() { log.innerHTML = L.idle((x) => `<span class="k">${x}</span>`) + '\n<span class="cur"></span>'; }
+
+/* ---- a reset: flash, drain, sparks. The simulation adds the packet and a delivery log. ---- */
+function burst(x, y, color) {
+  if (reduce) return;
+  for (let i = 0; i < 28; i++) {
+    const s = document.createElement("i"), a = (i / 28) * Math.PI * 2, r = 70 + Math.random() * 110;
+    s.className = "spark-px"; s.style.cssText = `left:${x}px;top:${y}px;--c:${i % 3 ? color : "var(--spark)"};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r - 30}px`;
+    $("#fx").appendChild(s); setTimeout(() => s.remove(), 900);
+  }
+}
+async function flyPacket(x0, y0, to) {
+  if (reduce) return;
+  const pk = document.createElement("div"); pk.className = "packet"; pk.innerHTML = '<svg width="28" height="20"><use href="#mail"/></svg>';
+  $("#fx").appendChild(pk);
+  const x1 = to.left + to.width / 2, y1 = to.top + 40;
+  const a = pk.animate([{ transform: `translate(${x0}px,${y0}px)` }, { transform: `translate(${(x0 + x1) / 2}px,${Math.min(y0, y1) - 60}px)` }, { transform: `translate(${x1}px,${y1}px)` }], { duration: 900, easing: "steps(18)", fill: "forwards" });
+  await a.finished; pk.remove();
+}
+function toast(text) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = text;
+  $("#toasts").appendChild(t); setTimeout(() => t.remove(), 6000);
+}
+async function celebrate(p, { sim = false } = {}) {
+  const cell = $(`.cell[data-p="${p}"]`), bar = $("#bar-" + p), rect = cell.getBoundingClientRect();
+  cell.classList.add("flash"); await wait(140); cell.classList.remove("flash");
+  burst(rect.left + rect.width / 2, rect.top + 150, getComputedStyle(cell).getPropertyValue("--c"));
+  [...bar.children].reverse().forEach((seg, i) => setTimeout(() => { seg.classList.remove("on", "lead"); seg.classList.add("out"); }, reduce ? 0 : i * 28));
+  bar.classList.remove("due"); await wait(620);
+  if (sim) override[p] = Date.now();
+  paintBar(p);
+  $("#st-" + p).textContent = L.justReset; $("#st-" + p).classList.remove("due");
+  if (!sim) toast(L.toast(P[p].name));
+  return rect;
+}
+async function simulate() {
+  const rect = await celebrate("codex", { sim: true });
+  await flyPacket(rect.left + rect.width / 2, rect.top + 40, log.getBoundingClientRect());
+  const t = Math.floor(Date.now() / 1000), sig = Array.from({ length: 6 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, "0")).join("");
+  log.innerHTML = "";
+  await logLines([
+    `<span class="k">→ POST</span> ${esc($("#u").value || "https://your.app/hooks/reset")} <span class="tag">${L.demo}</span>`,
+    `  x-resethook-event-type: codex.reset.landed`,
+    `  x-resethook-signature:  t=${t},v1=${sig}…`,
+    `  { "type": "codex.reset.landed", "data": { "product": "codex", … } }`,
+    `<span class="ok">← 200 OK</span>`,
+  ]);
+}
+$("#sim").addEventListener("click", async () => {
+  const btn = $("#sim");
+  if (simulating) { delete override.codex; simulating = false; btn.textContent = L.sim; paintBar("codex"); idle(); return; }
+  simulating = true; btn.disabled = true; await simulate(); btn.disabled = false; btn.textContent = L.back;
+});
+
+/* ---- live updates: poll our own (cached) status API once a minute ---- */
+async function refresh() {
+  try {
+    const s = await (await fetch("/api/v1/status")).json();
+    for (const p of PRODUCTS) {
+      const lr = s[p]?.last_reset;
+      if (!lr) continue;
+      P[p].gaps = s[p].gap_hours ?? P[p].gaps;
+      if (p === "codex") { P.codex.p24 = s.codex.forecast?.p24 ?? null; P.codex.p48 = s.codex.forecast?.p48 ?? null; P.codex.next = s.codex.next_estimate?.at ?? null; }
+      $("#chips-" + p).innerHTML = chipsHtml(p);
+      if (lr.landed_at !== P[p].last) {
+        const had = P[p].last != null;
+        P[p].last = lr.landed_at;
+        DATA.events.push({ p, stage: lr.stage, at: lr.landed_at, url: lr.post_url });
+        buildStrip();
+        if (had && !(simulating && p === "codex")) await celebrate(p); else paintBar(p);
+      }
+    }
+  } catch {}
+}
+setInterval(refresh, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+
+/* ---- sign-up ---- */
+document.querySelectorAll(".toggle").forEach((b) => b.addEventListener("click", () => b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true")));
+let sub = null;
+/* ---- Grok Bot setup ---- */
+$("#prompt").textContent = L.prompt;
+const copyText = async (text, btn) => { try { await navigator.clipboard.writeText(text); btn.textContent = L.copied; } catch { btn.textContent = L.copyFail; } setTimeout(() => (btn.textContent = L.copy), 1600); };
+$("#copyPrompt").addEventListener("click", (e) => copyText(L.prompt, e.currentTarget));
+$("#copyManage").addEventListener("click", (e) => copyText($("#manage").textContent, e.currentTarget));
+const loadTurnstile = () => { if (!SITEKEY || window.turnstile || document.getElementById("ts-js")) return; const s = document.createElement("script"); s.id = "ts-js"; s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js"; s.async = true; document.head.appendChild(s); };
+$("#gu").addEventListener("focus", loadTurnstile, { once: true });
+$("#g").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("#gbtn");
+  $("#gerr").textContent = "";
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/v1/subscriptions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: $("#gu").value.trim(), grok_key: $("#gk").value, lang: LANG, turnstile_token: document.querySelector('[name="cf-turnstile-response"]')?.value || undefined }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const hit = L.errs.find(([k]) => (j.error || "").includes(k)); $("#gerr").textContent = hit ? hit[1] : j.error || String(r.status); window.turnstile?.reset(); return; }
+    $("#manage").textContent = j.manage_url;
+    $("#done").classList.add("show");
+    $("#gk").value = "";
+    $("#done").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  } finally { btn.disabled = false; }
+});
+
+$("#u").addEventListener("focus", loadTurnstile, { once: true });
+$("#f").addEventListener("submit", async (e) => {
+  e.preventDefault(); $("#err").textContent = "";
+  const events = [...document.querySelectorAll('.toggle[aria-pressed="true"]')].map((b) => b.dataset.p + ".*");
+  if (!events.length) { $("#err").textContent = L.pick; return; }
+  const url = $("#u").value, submit = $("#f").querySelector('button[type="submit"]');
+  submit.disabled = true;
+  log.innerHTML = ""; await logLines([`<span class="k">→ POST</span> ${esc(url)}`, `  {"type":"challenge", …}`]);
+  try {
+    const r = await fetch("/api/v1/subscriptions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, events, turnstile_token: document.querySelector('[name="cf-turnstile-response"]')?.value || undefined }) });
+    const j = await r.json();
+    if (!r.ok) { $("#err").textContent = j.error || String(r.status); await logLines([`<span class="k">← ${r.status}</span> ${esc(j.error || "")}`]); window.turnstile?.reset(); return; }
+    sub = j;
+    await logLines([`<span class="ok">← 200 OK</span>  ${L.echoed}`, `<span class="k">${L.subscribed}</span> ${events.join(", ")}`]);
+    $("#secretv").textContent = `secret        ${j.secret}\nmanage_token  ${j.manage_token}\nid            ${j.id}`;
+    $("#secret").classList.add("show");
+  } catch (err) { $("#err").textContent = String(err); } finally { submit.disabled = false; }
+});
+$("#copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("#secretv").textContent); $("#copy").textContent = L.copied; } catch { $("#copy").textContent = L.copyFail; } });
+$("#testbtn").addEventListener("click", async () => {
+  if (!sub) return;
+  const r = await fetch(`/api/v1/subscriptions/${sub.id}/test`, { method: "POST", headers: { authorization: "Bearer " + sub.manage_token } });
+  const j = await r.json();
+  await logLines([j.delivered ? `<span class="ok">← ${j.http_status}</span>  ${L.delivered}` : `<span class="k">← ${j.http_status ?? "–"}</span>  ${esc(j.error || L.failed)}`]);
+});
+
+buildCells(); buildStrip(); idle(); tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
